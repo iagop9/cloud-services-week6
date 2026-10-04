@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Services - Weekly Assignment 5</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+            line-height: 1.6;
+        }
+
+        header {
+            background: #1f2937;
+            color: white;
+            padding: 42px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0 0 8px;
+            font-size: 2rem;
+        }
+
+        header p {
+            margin: 4px 0;
+        }
+
+        main {
+            max-width: 1050px;
+            margin: 30px auto;
+            padding: 0 20px 50px;
+        }
+
+        section {
+            background: white;
+            padding: 28px;
+            margin-bottom: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #1f2937;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            color: #374151;
+            margin-top: 24px;
+        }
+
+        .status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 14px;
+            margin-top: 20px;
+        }
+
+        .status-card {
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 16px;
+        }
+
+        .status-card strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .result {
+            background: #ecfdf5;
+            border-left: 4px solid #10b981;
+            padding: 16px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+
+        .architecture {
+            background: #111827;
+            color: #f9fafb;
+            padding: 22px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: monospace;
+            white-space: pre;
+        }
+
+        figure {
+            margin: 22px 0;
+        }
+
+        figure img {
+            width: 100%;
+            height: auto;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+        }
+
+        figcaption {
+            margin-top: 8px;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        code {
+            background: #f3f4f6;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        .comparison {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #d1d5db;
+            padding: 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background: #f3f4f6;
+        }
+
+        a {
+            color: #2563eb;
+        }
+
+        footer {
+            text-align: center;
+            color: #6b7280;
+            padding: 25px;
+        }
+
+        .error {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 16px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Cloud Services - Weekly Assignment 5</h1>
+    <p>Three-Tier Application on CSC Rahti</p>
+    <p>Iago Prol González</p>
+    <p><strong>Application version: 2.0.0</strong></p>
+</header>
+
+<main>
+
+    <section>
+        <h2>Application</h2>
+
+        <p>
+            This application is a three-tier web application deployed on CSC Rahti
+            using OpenShift/Kubernetes. It consists of a frontend, a backend REST API
+            and a MySQL database.
+        </p>
+
+        <div class="status">
+            <div class="status-card">
+                <strong>Frontend</strong>
+                Nginx
+            </div>
+
+            <div class="status-card">
+                <strong>Backend</strong>
+                Flask + Gunicorn
+            </div>
+
+            <div class="status-card">
+                <strong>Database</strong>
+                MySQL 8.4
+            </div>
+        </div>
+
+        <div class="result">
+            <strong>Live end-to-end connection</strong>
+            <p id="message">Loading data from backend...</p>
+            <p><strong>MySQL server time:</strong> <span id="database-time">Loading...</span></p>
+            <p><strong>Persistent visit counter:</strong> <span id="visits">Loading...</span></p>
+        </div>
+
+        <div class="result">
+    	    <strong>Live Public API - Weather in Oulu</strong>
+    	    <p><strong>Temperature:</strong> <span id="weather-temperature">Loading...</span> °C</p>
+    	    <p><strong>Feels like:</strong> <span id="weather-feels">Loading...</span> °C</p>
+    	    <p><strong>Wind speed:</strong> <span id="weather-wind">Loading...</span> km/h</p>
+    	    <p><strong>Weather:</strong> <span id="weather-condition">Loading...</span></p>
+    	    <p><strong>Observation time:</strong> <span id="weather-time">Loading...</span></p>
+	</div>
+
+	<p>
+            As a new Week 5 feature, the Flask backend retrieves current weather information for Oulu from the Open-Meteo public API. The frontend receives this information through the internal <code>/api/weather</code> endpoint.
+	</p>
+
+        <p>
+            When this page loads, Nginx sends a request to the backend REST API.
+            The backend connects to MySQL, increments the visit counter, performs
+            a database read and returns the result to the frontend.
+        </p>
+    </section>
+
+
+    <section>
+        <h2>Architecture</h2>
+
+        <div class="architecture">Internet
+   |
+   v
+OpenShift Route
+   |
+   v
+Frontend Service
+   |
+   v
+Frontend Pod (Nginx)
+   |
+   v
+Backend Service
+   |
+   v
+Backend Pod(s) (Flask + Gunicorn)
+   |
+   v
+MySQL Service
+   |
+   v
+MySQL Pod
+   |
+   v
+PersistentVolumeClaim (mysql-data)</div>
+
+        <p>
+            Only the frontend is directly accessible from the Internet through an
+            OpenShift Route. The backend and MySQL database use internal
+            ClusterIP Services and are not directly exposed to the Internet.
+        </p>
+    </section>
+
+
+    <section>
+        <h2>1. End-to-End Functionality</h2>
+
+        <p>
+            The frontend communicates with the backend using the Kubernetes
+            <code>backend</code> Service. The backend then communicates with MySQL
+            using the <code>mysql</code> Service.
+        </p>
+
+        <p>
+            The database interaction includes both a read and a write. The backend
+            increments the persistent visit counter and executes <code>SELECT NOW()</code>
+            to retrieve the current MySQL server time.
+        </p>
+
+        <figure>
+            <img src="/images/week4-06-rahti-end-to-end.png"
+                 alt="End-to-end application running on Rahti">
+            <figcaption>
+                Evidence of the complete frontend → backend → MySQL connection running on Rahti.
+            </figcaption>
+        </figure>
+    </section>
+
+
+    <section>
+        <h2>2. Configuration and Secrets</h2>
+
+        <p>
+            Application configuration is not hard-coded into the container images.
+            Kubernetes ConfigMaps and Secrets are used to provide configuration to
+            the containers.
+        </p>
+
+        <p>
+            A <strong>ConfigMap</strong> stores non-sensitive configuration such as
+            the database host, database name and database user. A
+            <strong>Secret</strong> is used for sensitive values such as database
+            passwords.
+        </p>
+
+        <p>
+            The real Secret manifest is excluded from the Git repository using
+            <code>.gitignore</code>. The repository only contains
+            <code>01-secret.example.yaml</code> with placeholder values.
+        </p>
+    </section>
+
+
+    <section>
+        <h2>3. Persistent Database Storage</h2>
+
+        <p>
+            MySQL uses a Kubernetes PersistentVolumeClaim called
+            <code>mysql-data</code>. The database files are therefore stored
+            independently of the lifecycle of an individual MySQL Pod.
+        </p>
+
+        <figure>
+            <img src="/images/week4-05-persistent-storage.png"
+                 alt="PersistentVolumeClaim in Rahti">
+            <figcaption>
+                The MySQL PersistentVolumeClaim is bound and used by the database.
+            </figcaption>
+        </figure>
+
+        <h3>Persistence experiment</h3>
+
+        <p>
+            I first loaded the application and recorded the current value of the
+            visit counter. I then manually deleted the MySQL Pod. The MySQL
+            Deployment created a new Pod and mounted the same persistent storage.
+            After the new Pod became ready, I reloaded the application.
+        </p>
+
+        <p>
+            The counter continued from its previous value instead of returning to
+            zero. This verified that the database data survived replacement of the
+            MySQL Pod.
+        </p>
+
+        <figure>
+            <img src="/images/week4-07-database-persistence.png"
+                 alt="Database persistence after MySQL Pod replacement">
+            <figcaption>
+                Database persistence test after deleting and replacing the MySQL Pod.
+            </figcaption>
+        </figure>
+
+        <h3>Comparison with Docker Compose</h3>
+
+        <p>
+            In the previous Docker Compose deployment, MySQL persistence was
+            provided by a Docker named volume. I also tested this locally by
+            recreating the database container and checking that the visit counter
+            remained stored.
+        </p>
+
+        <figure>
+            <img src="/images/week4-02-local-persistence.png"
+                 alt="Local Docker Compose persistence test">
+            <figcaption>
+                Local persistence test using the Docker Compose named volume.
+            </figcaption>
+        </figure>
+
+        <p>
+            Both solutions separate persistent data from the container itself.
+            The main difference is that Docker Compose manages the named volume on
+            the Docker host, while Rahti uses a PersistentVolumeClaim managed by
+            Kubernetes/OpenShift and the cluster storage system.
+        </p>
+    </section>
+
+
+    <section>
+        <h2>4. Pod Recovery</h2>
+
+        <p>
+            To test self-healing, I manually deleted the running backend Pod.
+            The backend Deployment had a desired replica count of one.
+        </p>
+
+        <p>
+            After the Pod was deleted, the Deployment and its ReplicaSet detected
+            that the actual state no longer matched the desired state. A new
+            backend Pod was automatically created without manually starting a new
+            container.
+        </p>
+
+        <figure>
+            <img src="/images/week4-08-backend-pod-recovery.png"
+                 alt="Backend Pod automatic recovery">
+            <figcaption>
+                Backend Pod deletion followed by automatic creation of a replacement Pod.
+            </figcaption>
+        </figure>
+    </section>
+
+
+    <section>
+        <h2>5. Backend Scaling</h2>
+
+        <p>
+            The backend Deployment was scaled from one replica to multiple replicas.
+            I initially tried three replicas, but the third Pod could not be created
+            because the CSC project CPU quota had been reached.
+        </p>
+
+        <p>
+            I therefore used two backend replicas, which was enough to verify the
+            scaling behaviour. Both Pods were available behind the same Kubernetes
+            <code>backend</code> Service.
+        </p>
+
+        <p>
+            The frontend does not need to know the IP addresses of individual
+            backend Pods. It always communicates with the Service using
+            <code>backend:8000</code>. Kubernetes handles communication with the
+            available backend Pods.
+        </p>
+
+        <figure>
+            <img src="/images/week4-09-backend-scaling.png"
+                 alt="Backend scaled to multiple replicas">
+            <figcaption>
+                Backend running with multiple replicas behind one ClusterIP Service.
+            </figcaption>
+        </figure>
+
+        <p>
+            After completing the experiment, the backend was returned to one
+            replica.
+        </p>
+    </section>
+
+
+    <section>
+        <h2>6. Application Update and Rolling Deployment</h2>
+
+        <p>
+            To test application updates, I created a new frontend image and changed
+            the application version from <code>1.0.0</code> to
+            <code>1.0.1</code>.
+        </p>
+
+        <p>
+            The frontend Deployment was updated to use the new image. During the
+            rollout, OpenShift created a new frontend Pod and then terminated the
+            old Pod. The rollout completed successfully.
+        </p>
+
+        <figure>
+            <img src="/images/week4-10-frontend-rollout.png"
+                 alt="Frontend rolling update">
+            <figcaption>
+                Rolling update showing the replacement of the old frontend Pod.
+            </figcaption>
+        </figure>
+
+        <figure>
+            <img src="/images/week4-11-version-1.0.1.png"
+                 alt="Application version 1.0.1">
+            <figcaption>
+                Application running successfully after the update to version 1.0.1.
+            </figcaption>
+        </figure>
+
+        <p>
+            Version 1.0.2 contains the final assignment documentation shown on this
+            page. The 1.0.0 → 1.0.1 rollout above was the experiment used to verify
+            the update behaviour.
+        </p>
+    </section>
+
+
+    <section>
+        <h2>7. Problems Encountered and Solutions</h2>
+
+        <h3>ARM64 and AMD64 container images</h3>
+
+        <p>
+            The first application images were built on an Apple Silicon Mac.
+            They were ARM64 images, while the Rahti worker node required an AMD64
+            image. This caused the application Pods to fail with an
+            <code>ImagePullBackOff</code>.
+        </p>
+
+        <p>
+            I solved the problem by rebuilding and pushing the frontend and backend
+            images with Docker Buildx using
+            <code>--platform linux/amd64</code>.
+        </p>
+
+        <h3>Nginx permissions</h3>
+
+        <p>
+            During the local container setup, Nginx initially had a permissions
+            problem related to its PID file. I changed the frontend to use the
+            unprivileged Nginx image and configured Nginx to run on port 8080.
+        </p>
+
+        <h3>CSC CPU quota</h3>
+
+        <p>
+            When I attempted to scale the backend to three replicas, OpenShift
+            reported a <code>FailedCreate</code> event because the CSC project CPU
+            quota was already reached. I reduced the test to two replicas, which
+            successfully demonstrated horizontal scaling while staying within the
+            available quota.
+        </p>
+    </section>
+
+
+    <section>
+        <h2>8. Docker Compose + cPouta vs Rahti</h2>
+
+        <div class="comparison">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Area</th>
+                        <th>Docker Compose + cPouta</th>
+                        <th>Rahti</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <tr>
+                        <td>Deployment</td>
+                        <td>
+                            Containers are defined in one Compose file and run on a
+                            Docker host/VM.
+                        </td>
+                        <td>
+                            The application uses separate Kubernetes/OpenShift
+                            resources such as Deployments, Services, ConfigMaps,
+                            Secrets, Routes and PVCs.
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Networking</td>
+                        <td>
+                            Containers communicate using Docker Compose service
+                            names and ports can be mapped directly from the host.
+                        </td>
+                        <td>
+                            Pods communicate through Kubernetes Services. Only the
+                            frontend is externally exposed through an OpenShift Route.
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Persistence</td>
+                        <td>
+                            MySQL data is stored in a Docker named volume associated
+                            with the Docker host.
+                        </td>
+                        <td>
+                            MySQL uses a PersistentVolumeClaim that exists
+                            independently of an individual Pod.
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Recovery</td>
+                        <td>
+                            Container lifecycle is mainly managed through Docker
+                            Compose and the Docker host.
+                        </td>
+                        <td>
+                            Deployments continuously maintain the desired number of
+                            Pods and automatically replace failed or deleted Pods.
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Scaling</td>
+                        <td>
+                            Scaling can be performed with Compose, but the
+                            application still depends on the single Docker host
+                            unless additional infrastructure is introduced.
+                        </td>
+                        <td>
+                            Deployment replicas can be changed declaratively and
+                            Services provide a stable endpoint for multiple Pods.
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Updates</td>
+                        <td>
+                            New container versions normally require recreating or
+                            updating containers on the Docker host.
+                        </td>
+                        <td>
+                            Deployments support controlled rolling updates between
+                            application image versions.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p>
+            Docker Compose was simpler for running the three containers on one VM,
+            while Rahti required more configuration. However, Rahti provided
+            orchestration features such as self-healing, stable Services, scaling,
+            persistent cluster storage and rolling deployments.
+        </p>
+    </section>
+
+
+    <section>
+    <h2>Week 5 - Public API Integration</h2>
+
+    <p>
+        For Week 5, I extended the three-tier application from Week 4 by
+        integrating an external public API. The Flask backend now retrieves
+        current weather information for Oulu from the Open-Meteo API.
+    </p>
+
+    <p>
+        A new <code>/api/weather</code> endpoint was added to the backend.
+        The backend requests the external weather data and returns the relevant
+        values to the frontend as JSON. The browser therefore communicates
+        with my Flask backend instead of accessing the external API directly.
+    </p>
+
+    <p>
+        The extended data flow is:
+        <strong>Frontend → Flask backend → Open-Meteo API</strong>.
+        The original <strong>Frontend → Backend → MySQL</strong> flow is
+        still used for the persistent visit counter and database time.
+    </p>
+
+    <p>
+        The integration displays the current temperature, apparent temperature,
+        wind speed, weather condition and observation time. Open-Meteo was
+        selected because it provides weather data through a REST API without
+        requiring an API key for this use case.
+    </p>
+
+    <h3>Local test</h3>
+
+    <p>
+        I first tested the extended application locally using Docker Compose.
+        The existing MySQL functionality and the new weather integration worked
+        together correctly.
+    </p>
+
+    <figure>
+        <img src="/images/week5-02-local-application.png"
+             alt="Week 5 application and Open-Meteo integration running locally">
+        <figcaption>
+            Week 5 application running locally with MySQL and live weather data.
+        </figcaption>
+    </figure>
+
+    <h3>Deployment on CSC Rahti</h3>
+
+    <p>
+        After the local test, I built the updated container images and deployed
+        the frontend and backend to CSC Rahti. The existing MySQL deployment
+        and persistent storage were kept in the application architecture.
+    </p>
+
+    <figure>
+        <img src="/images/week5-04-rahti-pods.png"
+             alt="Frontend backend and MySQL pods running on CSC Rahti">
+        <figcaption>
+            Frontend, backend and MySQL pods running successfully on CSC Rahti.
+        </figcaption>
+    </figure>
+
+    <h3>Testing the public endpoint</h3>
+
+    <p>
+        I verified the new endpoint through the public Rahti Route. A request
+        to <code>/api/weather</code> returned JSON containing current weather
+        information for Oulu, confirming that the deployed backend could
+        communicate with the external Open-Meteo API.
+    </p>
+
+    <figure>
+        <img src="/images/week5-05-rahti-public-api-terminal.png"
+             alt="Public weather API endpoint tested through the CSC Rahti Route">
+        <figcaption>
+            Testing the deployed /api/weather endpoint through the public Rahti Route.
+        </figcaption>
+    </figure>
+
+    <h3>Final result</h3>
+
+    <p>
+        Finally, I verified the integration from the deployed web application.
+        The frontend receives the weather information from the Flask backend
+        and displays it together with the original MySQL functionality.
+    </p>
+
+    <figure>
+        <img src="/images/week5-07-rahti-weather.png"
+             alt="Open-Meteo weather information displayed in the deployed application">
+        <figcaption>
+            Live Open-Meteo weather data displayed by the application deployed on Rahti.
+        </figcaption>
+    </figure>
+</section>
+
+
+    <section>
+        <h2>9. Source Code</h2>
+
+        <p>
+            The application source code and Kubernetes/OpenShift manifests are
+            available in the GitHub repository:
+        </p>
+
+        <p>
+            <a href="https://github.com/iagop9/cloud-services-week5"
+               target="_blank" rel="noopener noreferrer">
+                github.com/iagop9/cloud-services-week5
+            </a>
+        </p>
+
+        <p>
+            Database credentials are not committed to the repository. An example
+            Secret manifest is included so that another student can configure and
+            deploy the application using their own credentials.
+        </p>
+
+        <figure>
+            <img src="/images/week4-12-github-repository.png"
+                 alt="GitHub repository">
+            <figcaption>
+                Public GitHub repository containing the application and deployment configuration.
+            </figcaption>
+        </figure>
+    </section>
+
+</main>
+
+<footer>
+    Cloud Services - Weekly Assignment 5 | Iago Prol González
+</footer>
+
+
+<script>
+    async function loadData() {
+        try {
+            const response = await fetch('/api');
+
+            if (!response.ok) {
+                throw new Error('Backend returned HTTP ' + response.status);
+            }
+
+            const data = await response.json();
+
+            document.getElementById('message').textContent = data.message;
+            document.getElementById('database-time').textContent = data.database_time;
+            document.getElementById('visits').textContent = data.visits;
+        } catch (error) {
+            document.getElementById('message').textContent =
+                'Unable to retrieve data from the backend.';
+            document.getElementById('database-time').textContent = '-';
+            document.getElementById('visits').textContent = '-';
+            console.error(error);
+        }
+    }
+
+async function loadWeather() {
+    try {
+        const response = await fetch('/api/weather');
+
+        if (!response.ok) {
+            throw new Error('Weather API returned HTTP ' + response.status);
+        }
+
+        const data = await response.json();
+
+        const weatherCodes = {
+            0: 'Clear sky',
+            1: 'Mainly clear',
+            2: 'Partly cloudy',
+            3: 'Overcast',
+            45: 'Fog',
+            48: 'Rime fog',
+            51: 'Light drizzle',
+            53: 'Moderate drizzle',
+            55: 'Dense drizzle',
+            61: 'Slight rain',
+            63: 'Moderate rain',
+            65: 'Heavy rain',
+            71: 'Slight snow',
+            73: 'Moderate snow',
+            75: 'Heavy snow',
+            80: 'Slight rain showers',
+            81: 'Moderate rain showers',
+            82: 'Violent rain showers',
+            95: 'Thunderstorm'
+        };
+
+        document.getElementById('weather-temperature').textContent =
+            data.temperature;
+        document.getElementById('weather-feels').textContent =
+            data.apparent_temperature;
+        document.getElementById('weather-wind').textContent =
+            data.wind_speed;
+        document.getElementById('weather-condition').textContent =
+            weatherCodes[data.weather_code] || 'Weather code ' + data.weather_code;
+        document.getElementById('weather-time').textContent =
+            data.time;
+
+    } catch (error) {
+        document.getElementById('weather-temperature').textContent = '-';
+        document.getElementById('weather-feels').textContent = '-';
+        document.getElementById('weather-wind').textContent = '-';
+        document.getElementById('weather-condition').textContent =
+            'Unable to retrieve weather data';
+        document.getElementById('weather-time').textContent = '-';
+        console.error(error);
+    }
+}
+
+    loadData();
+    loadWeather();
+</script>
+
+</body>
+</html>

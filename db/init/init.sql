@@ -1,0 +1,10 @@
+USE appdb;
+
+CREATE TABLE IF NOT EXISTS visits (
+    id INT PRIMARY KEY,
+    count INT NOT NULL DEFAULT 0
+);
+
+INSERT INTO visits (id, count)
+VALUES (1, 0)
+ON DUPLICATE KEY UPDATE id = id;
