@@ -162,10 +162,10 @@
 <body>
 
 <header>
-    <h1>Cloud Services - Weekly Assignment 5</h1>
+    <h1>Cloud Services - Weekly Assignment 6</h1>
     <p>Three-Tier Application on CSC Rahti</p>
     <p>Iago Prol González</p>
-    <p><strong>Application version: 2.0.0</strong></p>
+    <p><strong>Application version: 3.0.0</strong></p>
 </header>
 
 <main>
@@ -712,6 +712,246 @@ PersistentVolumeClaim (mysql-data)</div>
 </section>
 
 
+
+    <section>
+        <h2>Week 6 - CI/CD and Observability</h2>
+
+        <p>
+            In Week 6 I extended the application with a GitHub Actions CI/CD
+            pipeline and basic observability features. The pipeline automatically
+            builds and publishes the backend image and deploys it to Rahti.
+            I also added liveness and readiness probes and structured HTTP
+            request logging to the Flask backend.
+        </p>
+
+        <h3>Part A - Questions</h3>
+
+        <h4>1. Continuous Integration, Continuous Delivery and Continuous Deployment</h4>
+        <p>
+            Continuous Integration (CI) means frequently integrating code changes
+            into a shared repository and automatically checking that those changes
+            can be built and tested. Continuous Delivery extends CI by keeping the
+            application in a deployable state, although deploying to production
+            can still require a manual decision. Continuous Deployment goes one
+            step further: changes that successfully pass the pipeline are
+            automatically deployed without a manual deployment step.
+        </p>
+        <p>
+            In this assignment my workflow performs CI by building the backend
+            container after a push to the main branch. It also performs an
+            automated deployment to Rahti, so the deployment step does not need
+            to be executed manually.
+        </p>
+
+        <h4>2. Structure of a GitHub Actions workflow</h4>
+        <p>
+            A GitHub Actions workflow is defined in a YAML file. A trigger
+            determines when the workflow starts, for example a push to the
+            <code>main</code> branch. A workflow contains one or more jobs, and
+            each job contains a sequence of steps. Steps can execute shell
+            commands or use reusable GitHub Actions.
+        </p>
+        <p>
+            For this application the minimum useful pipeline needs to check out
+            the repository, authenticate to the container registry, build and
+            push the backend image, authenticate to Rahti and update the backend
+            Deployment. I use the Git commit SHA as the image tag, which makes
+            it possible to connect a deployed container image to a specific
+            commit.
+        </p>
+
+        <h4>5. Liveness and readiness probes</h4>
+        <p>
+            A liveness probe checks whether a container is still functioning.
+            If it repeatedly fails, Kubernetes can restart the container. A
+            readiness probe instead checks whether the application is currently
+            able to receive traffic. When readiness fails, the pod can continue
+            running, but Kubernetes removes it from the Service endpoints.
+        </p>
+        <p>
+            In my backend, <code>/healthz</code> is used for liveness because it
+            only verifies that the Flask application responds. The
+            <code>/readyz</code> endpoint is used for readiness and checks the
+            MySQL connection. This means that a database failure can stop traffic
+            from being sent to the backend without incorrectly treating the
+            Flask process itself as dead.
+        </p>
+
+        <h4>7. Secrets in a CI/CD pipeline</h4>
+        <p>
+            Secrets such as registry tokens and cluster credentials must not be
+            hard-coded in a workflow or committed to Git because repository
+            history can expose them. GitHub Actions provides repository secrets
+            for storing sensitive values separately from the workflow source.
+        </p>
+        <p>
+            My workflow uses GitHub repository secrets for the Docker Hub
+            credentials and the Rahti server and token. The workflow references
+            these values through the <code>secrets</code> context, so the actual
+            credentials are not stored in <code>deploy.yml</code>.
+        </p>
+
+        <h3>Part B - CI/CD Pipeline</h3>
+
+        <p>
+            The workflow is stored in
+            <code>.github/workflows/deploy.yml</code> and is triggered by every
+            push to the <code>main</code> branch. It builds the backend image for
+            Linux AMD64, pushes it to Docker Hub using the commit SHA as its tag,
+            logs in to Rahti and updates the backend Deployment with
+            <code>oc set image</code>.
+        </p>
+
+        <figure>
+            <img src="/images/week6-03-github-actions-success.png"
+                 alt="Successful GitHub Actions CI/CD workflow">
+            <figcaption>
+                Successful GitHub Actions run showing the build, registry push,
+                Rahti login and deployment steps.
+            </figcaption>
+        </figure>
+
+        <h3>Deployment verification</h3>
+
+        <p>
+            After the workflow completed, I verified the Deployment directly
+            from Rahti. A new backend pod had been created and its image was
+            tagged with the same Git commit SHA that triggered the workflow.
+            This confirms that the pipeline performed a real deployment rather
+            than only building the container image.
+        </p>
+
+        <figure>
+            <img src="/images/week6-04-rahti-cicd-deployment.png"
+                 alt="Backend image deployed to Rahti using the Git commit SHA">
+            <figcaption>
+                New backend pod and SHA-tagged Week 6 image deployed by the
+                GitHub Actions pipeline.
+            </figcaption>
+        </figure>
+
+        <h3>Health checks</h3>
+
+        <p>
+            I added two HTTP probes to the backend Deployment. The liveness
+            probe requests <code>/healthz</code>, while the readiness probe
+            requests <code>/readyz</code>. The readiness endpoint also verifies
+            that the backend can connect to MySQL.
+        </p>
+
+        <figure>
+            <img src="/images/week6-06-probe-configuration.png"
+                 alt="Liveness and readiness probe configuration in Rahti">
+            <figcaption>
+                Backend running with the /healthz liveness probe and /readyz
+                readiness probe.
+            </figcaption>
+        </figure>
+
+        <h3>Readiness failure test</h3>
+
+        <p>
+            To test the readiness probe deliberately, I temporarily scaled the
+            MySQL Deployment to zero replicas. The Flask backend process
+            continued running, but <code>/readyz</code> could no longer verify
+            the database connection. After the readiness failures, the backend
+            changed from <code>1/1</code> to <code>0/1</code> Ready and its
+            Service had no backend endpoint. The pod had zero restarts, showing
+            the difference between readiness and liveness.
+        </p>
+
+        <figure>
+            <img src="/images/week6-07-readiness-failure.png"
+                 alt="Backend readiness failure after stopping MySQL">
+            <figcaption>
+                The backend remains running but is not Ready and is removed from
+                the Service endpoints when MySQL is unavailable.
+            </figcaption>
+        </figure>
+
+        <p>
+            I then restored MySQL to one replica. Once the database became
+            available again, the readiness probe succeeded automatically and
+            the backend returned to <code>1/1</code> Ready. Its address also
+            returned to the Service endpoints.
+        </p>
+
+        <figure>
+            <img src="/images/week6-08-readiness-recovery.png"
+                 alt="Backend readiness recovery after restoring MySQL">
+            <figcaption>
+                Automatic readiness recovery and restoration of the backend
+                Service endpoint after MySQL was restarted.
+            </figcaption>
+        </figure>
+
+        <h3>Structured logging</h3>
+
+        <p>
+            The backend now produces structured request logs containing the HTTP
+            method, request path, response status and response time in
+            milliseconds. These logs can be retrieved directly from the
+            deployed container using <code>oc logs deployment/backend</code>.
+        </p>
+
+        <figure>
+            <img src="/images/week6-05-rahti-structured-logs.png"
+                 alt="Structured Flask request logs retrieved using oc logs">
+            <figcaption>
+                Structured request logs from the backend running on Rahti,
+                including health checks and application requests.
+            </figcaption>
+        </figure>
+
+        <h3>Possible alert rule</h3>
+
+        <p>
+            A useful alert for this application would be a sustained increase
+            in HTTP 5xx responses, because this would indicate that users are
+            receiving server-side errors. I would avoid alerting on a single
+            failed request because occasional failures can happen and would
+            create unnecessary alerts. For example, an alert could be generated
+            when several 5xx responses occur during a five-minute period.
+            Response time could also be monitored to detect sustained increases
+            in latency.
+        </p>
+
+        <h3>Problems encountered and solutions</h3>
+
+        <p>
+            The first pipeline attempt failed because the Docker build context
+            did not match the paths used by the backend Dockerfile. I corrected
+            the GitHub Actions build context and explicitly selected
+            <code>backend/Dockerfile</code>. A later run also encountered a
+            temporary Docker Hub 502 response and was retried.
+        </p>
+
+        <p>
+            The Rahti authentication step initially failed because the existing
+            OpenShift token had expired. I generated a new login token and
+            updated the GitHub repository secret without storing the token in
+            the repository.
+        </p>
+
+        <p>
+            Finally, the existing Rahti Deployment still contained the older
+            readiness probe from Week 4. Updating only the container image does
+            not update the rest of the Deployment specification, so I updated
+            the Deployment with the new Week 6 liveness and readiness probes
+            and verified their behaviour by deliberately making the database
+            unavailable.
+        </p>
+
+        <h3>References</h3>
+
+        <p>
+            GitHub Docs: Understanding GitHub Actions and using secrets in
+            GitHub Actions.<br>
+            Kubernetes Documentation: Configure Liveness, Readiness and Startup
+            Probes.
+        </p>
+    </section>
+
     <section>
         <h2>9. Source Code</h2>
 
@@ -721,9 +961,9 @@ PersistentVolumeClaim (mysql-data)</div>
         </p>
 
         <p>
-            <a href="https://github.com/iagop9/cloud-services-week5"
+            <a href="https://github.com/iagop9/cloud-services-week6"
                target="_blank" rel="noopener noreferrer">
-                github.com/iagop9/cloud-services-week5
+                github.com/iagop9/cloud-services-week6
             </a>
         </p>
 
